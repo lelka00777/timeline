@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контроль перерывов сотрудников</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+            padding: 12px;
+            overflow-x: auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            font-size: 1.4rem;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .input-group {
+            width: 100%;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.85rem;
+        }
+        
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+            padding: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .timeline-container {
+            overflow-x: auto;
+            margin-bottom: 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .timeline-header {
+            display: flex;
+            height: 30px;
+            margin-left: 120px;
+            min-width: max-content;
+        }
+        
+        .time-slot {
+            flex: 0 0 35px;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 0.65rem;
+            border-left: 1px solid #ddd;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 35px;
+        }
+        
+        .employee-row {
+            display: flex;
+            min-height: 60px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            min-width: max-content;
+        }
+        
+        .employee-info {
+            flex: 0 0 120px;
+            padding: 6px;
+            background: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 2px solid #bdc3c7;
+            min-width: 120px;
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+        
+        .employee-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+        
+        .employee-position {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+        }
+        
+        .time-cells {
+            display: flex;
+            flex: 1;
+            min-width: max-content;
+        }
+        
+        .time-cell {
+            flex: 0 0 35px;
+            border: 1px solid #ddd;
+            border-left: none;
+            background: #ecf0f1;
+            transition: background 0.2s;
+            min-width: 35px;
+        }
+        
+        .time-cell.active {
+            background: #3498db;
+        }
+        
+        .time-cell.break {
+            background: #e74c3c;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 12px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+        
+        .working-time {
+            background: #3498db;
+        }
+        
+        .break-time {
+            background: #e74c3c;
+        }
+        
+        .employee-controls {
+            display: flex;
+            gap: 6px;
+            flex-direction: column;
+        }
+        
+        .employee-controls button {
+            padding: 5px;
+            font-size: 0.7rem;
+        }
+        
+        .show-breaks-btn {
+            background: #9b59b6;
+        }
+        
+        .show-breaks-btn:hover {
+            background: #8e44ad;
+        }
+        
+        .edit-btn {
+            background: #f39c12;
+        }
+        
+        .edit-btn:hover {
+            background: #e67e22;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .view-schedule {
+            background: #27ae60;
+        }
+        
+        .view-schedule:hover {
+            background: #219653;
+        }
+        
+        .clear-data {
+            background: #e74c3c;
+        }
+        
+        .clear-data:hover {
+            background: #c0392b;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+            width: auto;
+        }
+        
+        .breaks-list {
+            margin-top: 10px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        
+        .break-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .break-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .break-actions button {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+        }
+        
+        .total-breaks {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        .add-break-form {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .form-row .input-group {
+            flex: 1;
+        }
+        
+        .edit-form {
+            margin-top: 15px;
+        }
+        
+        .edit-form .input-group {
+            margin-bottom: 12px;
+        }
+        
+        .pdf-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1001;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 15px 10px 10px 10px;
+            border-bottom: 2px solid #eee;
+            flex-shrink: 0;
+        }
+        
+        .pdf-timeline-container {
+            width: 100%;
+            flex: 1;
+            overflow: auto;
+            padding: 0 10px;
+        }
+        
+        .pdf-timeline-header {
+            display: flex;
+            height: 25px;
+            margin-left: 100px;
+            min-width: max-content;
+        }
+        
+        .pdf-time-slot {
+            flex: 0 0 25px;
+            text-align: center;
+            padding: 4px 0;
+            font-size: 0.6rem;
+            border-left: 1px solid #ddd;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 25px;
+        }
+        
+        .pdf-employee-row {
+            display: flex;
+            min-height: 45px;
+            margin-bottom: 6px;
+            min-width: max-content;
+        }
+        
+        .pdf-employee-info {
+            flex: 0 0 100px;
+            padding: 4px;
+            background: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 2px solid #bdc3c7;
+            font-size: 0.75rem;
+            min-width: 100px;
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+        
+        .pdf-time-cells {
+            display: flex;
+            flex: 1;
+            min-width: max-content;
+        }
+        
+        .pdf-time-cell {
+            flex: 0 0 25px;
+            border: 1px solid #ddd;
+            border-left: none;
+            background: #ecf0f1;
+            min-width: 25px;
+        }
+        
+        .pdf-time-cell.active {
+            background: #3498db;
+        }
+        
+        .pdf-time-cell.break {
+            background: #e74c3c;
+        }
+        
+        .pdf-close {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 1002;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .share-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 15px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        
+        .share-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.3s;
+            width: 55px;
+            height: 55px;
+        }
+        
+        .share-btn:hover {
+            background: #e8f4fc;
+        }
+        
+        .share-icon {
+            width: 25px;
+            height: 25px;
+            margin-bottom: 4px;
+        }
+        
+        .share-text {
+            font-size: 0.65rem;
+            color: #2c3e50;
+        }
+        
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1003;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .preview-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .preview-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .preview-buttons button {
+            width: auto;
+            padding: 10px 20px;
+        }
+        
+        @media (max-width: 480px) {
+            .time-slot, .time-cell {
+                flex: 0 0 30px;
+                min-width: 30px;
+                font-size: 0.6rem;
+            }
+            
+            .employee-info {
+                flex: 0 0 100px;
+                min-width: 100px;
+            }
+            
+            .employee-name {
+                font-size: 0.8rem;
+            }
+            
+            .employee-position {
+                font-size: 0.7rem;
+            }
+            
+            .pdf-time-slot, .pdf-time-cell {
+                flex: 0 0 22px;
+                min-width: 22px;
+                font-size: 0.55rem;
+            }
+            
+            .pdf-employee-info {
+                flex: 0 0 85px;
+                min-width: 85px;
+                font-size: 0.65rem;
+            }
+            
+            .pdf-timeline-header {
+                margin-left: 85px;
+            }
+            
+            .share-btn {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .share-icon {
+                width: 22px;
+                height: 22px;
+            }
+        }
+        
+        @media (orientation: landscape) {
+            .pdf-timeline-container {
+                transform: scale(0.85);
+                transform-origin: top center;
+            }
+        }
+        
+        @media (orientation: portrait) {
+            .pdf-timeline-container {
+                transform: scale(0.9);
+                transform-origin: top center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Контроль перерывов сотрудников</h1>
+        
+        <div class="controls">
+            <div class="input-group">
+                <label for="employeeName">Имя сотрудника</label>
+                <input type="text" id="employeeName" placeholder="Введите имя">
+            </div>
+            
+            <div class="input-group">
+                <label for="employeePosition">Должность</label>
+                <input type="text" id="employeePosition" placeholder="Введите должность">
+            </div>
+            
+            <div class="input-group">
+                <label>&nbsp;</label>
+                <button id="addEmployee">Добавить сотрудника</button>
+            </div>
+        </div>
+        
+        <div class="timeline-container">
+            <div class="timeline-header" id="timelineHeader">
+                <!-- Timeline headers will be generated here -->
+            </div>
+            
+            <div id="employeesContainer">
+                <!-- Employee rows will be generated here -->
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color working-time"></div>
+                <span>Рабочее время</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color break-time"></div>
+                <span>Перерыв</span>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="view-schedule" id="viewSchedule">Посмотреть график</button>
+            <button class="clear-data" id="clearData">Очистить все данные</button>
+        </div>
+    </div>
+
+    <!-- PDF View -->
+    <div class="pdf-view" id="pdfView">
+        <button class="pdf-close" id="pdfClose">×</button>
+        <div class="pdf-header">
+            <h2>График перерывов сотрудников</h2>
+            <p id="pdfDate"></p>
+        </div>
+        
+        <div class="share-container">
+            <button class="share-btn" onclick="showPreview('telegram')">
+                <svg class="share-icon" viewBox="0 0 24 24" fill="#0088cc">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.160-.295.295-.605.295l.213-3.053 5.56-5.022c.242-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.652-.64.136-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+                </svg>
+                <span class="share-text">Telegram</span>
+            </button>
+            
+            <button class="share-btn" onclick="showPreview('whatsapp')">
+                <svg class="share-icon" viewBox="0 0 24 24" fill="#25D366">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.150-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.864 3.488"/>
+                </svg>
+                <span class="share-text">WhatsApp</span>
+            </button>
+            
+            <button class="share-btn" onclick="showPreview('pdf')">
+                <svg class="share-icon" viewBox="0 0 24 24" fill="#e74c3c">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM8.5 16.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.79-5.5L9 11H6.5l4.5-4.5V10c0 .55.45 1 1 1h1.5v2.5H10.29z"/>
+                </svg>
+                <span class="share-text">PDF</span>
+            </button>
+            
+            <button class="share-btn" onclick="showPreview('image')">
+                <svg class="share-icon" viewBox="0 0 24 24" fill="#3498db">
+                    <path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.86 8.86l-3 3.87L9 13.14 6 17h12l-3.86-5.14z"/>
+                </svg>
+                <span class="share-text">JPG</span>
+            </button>
+        </div>
+        
+        <div class="pdf-timeline-container">
+            <div class="pdf-timeline-header" id="pdfTimelineHeader">
+                <!-- PDF Timeline headers will be generated here -->
+            </div>
+            
+            <div id="pdfEmployeesContainer">
+                <!-- PDF Employee rows will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Редактирование сотрудника</h2>
+                <button class="close-modal" onclick="closeEditModal()">&times;</button>
+            </div>
+            
+            <div class="edit-form">
+                <div class="input-group">
+                    <label for="editName">Имя сотрудника</label>
+                    <input type="text" id="editName" placeholder="Введите имя">
+                </div>
+                
+                <div class="input-group">
+                    <label for="editPosition">Должность</label>
+                    <input type="text" id="editPosition" placeholder="Введите должность">
+                </div>
+                
+                <button onclick="saveEmployeeEdit()">Сохранить</button>
+                <button onclick="closeEditModal()" style="background: #95a5a6; margin-top: 10px;">Отменить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breaks Modal -->
+    <div class="modal" id="breaksModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalEmployeeName">Перерывы сотрудника</h2>
+                <button class="close-modal" onclick="closeBreaksModal()">&times;</button>
+            </div>
+            
+            <div class="add-break-form">
+                <h3>Добавить перерыв</h3>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="modalBreakStart">Начало перерыва</label>
+                        <input type="time" id="modalBreakStart" step="900" value="13:00">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="modalBreakDuration">Длительность</label>
+                        <select id="modalBreakDuration">
+                            <option value="15">15 минут</option>
+                            <option value="30" selected>30 минут</option>
+                            <option value="45">45 минут</option>
+                            <option value="60">1 час</option>
+                            <option value="75">1 час 15 мин</option>
+                            <option value="90">1 час 30 мин</option>
+                            <option value="105">1 час 45 мин</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="modalAddBreak">Добавить перерыв</button>
+            </div>
+            
+            <div class="breaks-list" id="breaksList">
+                <!-- Breaks will be listed here -->
+            </div>
+            <div class="total-breaks" id="totalBreaks">
+                <!-- Total breaks time will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <h2>Предварительный просмотр</h2>
+            <p>Вы действительно хотите отправить/сохранить график?</p>
+            <div class="preview-buttons">
+                <button id="confirmAction" style="background: #27ae60;">Да</button>
+                <button onclick="closePreviewModal()" style="background: #95a5a6;">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const { jsPDF } = window.jspdf;
+            const workStart = new Date();
+            workStart.setHours(9, 45, 0, 0);
+            
+            const workEnd = new Date();
+            workEnd.setHours(22, 45, 0, 0);
+            
+            const timeInterval = 15; // minutes
+            let employees = [];
+            let selectedEmployeeId = null;
+            let currentModalEmployeeId = null;
+            let currentEditEmployeeId = null;
+            let currentAction = null;
+            
+            // Load data from localStorage
+            loadFromLocalStorage();
+            
+            // Generate timeline headers
+            const timelineHeader = document.getElementById('timelineHeader');
+            generateTimelineHeaders();
+            
+            // Add employee function
+            document.getElementById('addEmployee').addEventListener('click', function() {
+                const name = document.getElementById('employeeName').value.trim();
+                const position = document.getElementById('employeePosition').value.trim();
+                
+                if (!name || !position) {
+                    alert('Пожалуйста, заполните имя и должность сотрудника');
+                    return;
+                }
+                
+                const employee = {
+                    id: Date.now(),
+                    name,
+                    position,
+                    breaks: []
+                };
+                
+                employees.push(employee);
+                renderEmployees();
+                saveToLocalStorage();
+                
+                // Clear input fields
+                document.getElementById('employeeName').value = '';
+                document.getElementById('employeePosition').value = '';
+            });
+            
+            // View schedule function
+            document.getElementById('viewSchedule').addEventListener('click', function() {
+                document.getElementById('pdfView').style.display = 'flex';
+                document.getElementById('pdfDate').textContent = new Date().toLocaleDateString('ru-RU');
+                renderPdfView();
+                
+                // Disable body scroll
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // Close PDF view function
+            document.getElementById('pdfClose').addEventListener('click', function() {
+                document.getElementById('pdfView').style.display = 'none';
+                
+                // Enable body scroll
+                document.body.style.overflow = 'auto';
+            });
+            
+            // Add break from modal function
+            document.getElementById('modalAddBreak').addEventListener('click', function() {
+                const breakStart = document.getElementById('modalBreakStart').value;
+                const breakDuration = parseInt(document.getElementById('modalBreakDuration').value);
+                
+                if (!breakStart) {
+                    alert('Пожалуйста, выберите время начала перерыва');
+                    return;
+                }
+                
+                if (!currentModalEmployeeId) {
+                    alert('Пожалуйста, выберите сотрудника');
+                    return;
+                }
+                
+                const employee = employees.find(emp => emp.id === currentModalEmployeeId);
+                
+                const [hours, minutes] = breakStart.split(':').map(Number);
+                const breakStartTime = new Date();
+                breakStartTime.setHours(hours, minutes, 0, 0);
+                
+                const breakEndTime = new Date(breakStartTime);
+                breakEndTime.setMinutes(breakEndTime.getMinutes() + breakDuration);
+                
+                // Check if break is within working hours
+                if (breakStartTime < workStart || breakEndTime > workEnd) {
+                    alert('Перерыв должен быть в пределах рабочего времени (9:45 - 22:45)');
+                    return;
+                }
+                
+                // Check if break overlaps with existing breaks
+                const isOverlap = employee.breaks.some(breakItem => {
+                    return (breakStartTime >= breakItem.start && breakStartTime < breakItem.end) ||
+                           (breakEndTime > breakItem.start && breakEndTime <= breakItem.end) ||
+                           (breakStartTime <= breakItem.start && breakEndTime >= breakItem.end);
+                });
+                
+                if (isOverlap) {
+                    alert('Перерыв пересекается с уже существующим перерывом');
+                    return;
+                }
+                
+                employee.breaks.push({
+                    id: Date.now(),
+                    start: new Date(breakStartTime),
+                    end: new Date(breakEndTime)
+                });
+                
+                renderEmployees();
+                saveToLocalStorage();
+                
+                // Refresh breaks modal
+                showBreaks(currentModalEmployeeId);
+            });
+            
+            // Clear data function
+            document.getElementById('clearData').addEventListener('click', function() {
+                if (confirm('Вы уверены, что хотите удалить все данные? Это действие нельзя отменить.')) {
+                    employees = [];
+                    selectedEmployeeId = null;
+                    renderEmployees();
+                    localStorage.removeItem('employeeBreakData');
+                }
+            });
+            
+            // Show preview modal
+            function showPreview(action) {
+                currentAction = action;
+                document.getElementById('previewModal').style.display = 'flex';
+                
+                const confirmButton = document.getElementById('confirmAction');
+                confirmButton.onclick = function() {
+                    closePreviewModal();
+                    switch(action) {
+                        case 'telegram':
+                            shareTo('telegram');
+                            break;
+                        case 'whatsapp':
+                            shareTo('whatsapp');
+                            break;
+                        case 'pdf':
+                            exportToPDF();
+                            break;
+                        case 'image':
+                            exportToImage();
+                            break;
+                    }
+                };
+            }
+            
+            // Close preview modal
+            function closePreviewModal() {
+                document.getElementById('previewModal').style.display = 'none';
+            }
+            
+            // Open edit modal
+            function openEditModal(employeeId) {
+                const employee = employees.find(emp => emp.id === employeeId);
+                if (!employee) return;
+                
+                currentEditEmployeeId = employeeId;
+                document.getElementById('editName').value = employee.name;
+                document.getElementById('editPosition').value = employee.position;
+                document.getElementById('editModal').style.display = 'flex';
+            }
+            
+            // Close edit modal
+            function closeEditModal() {
+                document.getElementById('editModal').style.display = 'none';
+                currentEditEmployeeId = null;
+            }
+            
+            // Save employee edit
+            function saveEmployeeEdit() {
+                if (!currentEditEmployeeId) return;
+                
+                const name = document.getElementById('editName').value.trim();
+                const position = document.getElementById('editPosition').value.trim();
+                
+                if (!name || !position) {
+                    alert('Пожалуйста, заполните имя и должность');
+                    return;
+                }
+                
+                const employee = employees.find(emp => emp.id === currentEditEmployeeId);
+                employee.name = name;
+                employee.position = position;
+                
+                renderEmployees();
+                saveToLocalStorage();
+                closeEditModal();
+            }
+            
+            // Close breaks modal
+            function closeBreaksModal() {
+                document.getElementById('breaksModal').style.display = 'none';
+                currentModalEmployeeId = null;
+            }
+            
+            // Show breaks function
+            function showBreaks(employeeId) {
+                const employee = employees.find(emp => emp.id === employeeId);
+                if (!employee) return;
+                
+                currentModalEmployeeId = employeeId;
+                document.getElementById('modalEmployeeName').textContent = `Перерывы: ${employee.name}`;
+                
+                const breaksList = document.getElementById('breaksList');
+                breaksList.innerHTML = '';
+                
+                if (employee.breaks.length === 0) {
+                    breaksList.innerHTML = '<p>Перерывы не назначены</p>';
+                    document.getElementById('totalBreaks').innerHTML = '';
+                } else {
+                    let totalMinutes = 0;
+                    
+                    employee.breaks.forEach((br, index) => {
+                        const startTime = br.start.toTimeString().substring(0, 5);
+                        const endTime = br.end.toTimeString().substring(0, 5);
+                        const duration = (br.end - br.start) / (1000 * 60);
+                        totalMinutes += duration;
+                        
+                        const breakItem = document.createElement('div');
+                        breakItem.className = 'break-item';
+                        breakItem.innerHTML = `
+                            <span>${index + 1}. ${startTime} - ${endTime} (${duration} мин)</span>
+                            <div class="break-actions">
+                                <button onclick="editBreak(${employeeId}, ${br.id})">Изменить</button>
+                                <button onclick="removeBreak(${employeeId}, ${br.id})">Удалить</button>
+                            </div>
+                        `;
+                        
+                        breaksList.appendChild(breakItem);
+                    });
+                    
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = totalMinutes % 60;
+                    let totalTimeText = `Общее время перерывов: ${totalMinutes} мин`;
+                    
+                    if (hours > 0) {
+                        totalTimeText = `Общее время перерывов: ${hours} ч ${minutes} мин`;
+                    }
+                    
+                    document.getElementById('totalBreaks').innerHTML = totalTimeText;
+                }
+                
+                document.getElementById('breaksModal').style.display = 'flex';
+            }
+            
+            // Edit break function
+            function editBreak(employeeId, breakId) {
+                const employee = employees.find(emp => emp.id === employeeId);
+                if (!employee) return;
+                
+                const breakItem = employee.breaks.find(br => br.id === breakId);
+                if (!breakItem) return;
+                
+                // Set the break time in the modal form
+                const breakStartFormatted = breakItem.start.toTimeString().substring(0, 5);
+                document.getElementById('modalBreakStart').value = breakStartFormatted;
+                
+                const duration = (breakItem.end - breakItem.start) / (1000 * 60);
+                document.getElementById('modalBreakDuration').value = duration;
+                
+                // Remove the old break
+                removeBreak(employeeId, breakId);
+                
+                // Focus on the form
+                document.getElementById('modalBreakStart').focus();
+            }
+            
+            // Remove break function
+            function removeBreak(employeeId, breakId) {
+                const employee = employees.find(emp => emp.id === employeeId);
+                if (!employee) return;
+                
+                employee.breaks = employee.breaks.filter(br => br.id !== breakId);
+                renderEmployees();
+                saveToLocalStorage();
+                
+                // Refresh breaks modal if it's open for this employee
+                if (currentModalEmployeeId === employeeId) {
+                    showBreaks(employeeId);
+                }
+            }
+            
+            // Generate timeline headers
+            function generateTimelineHeaders() {
+                timelineHeader.innerHTML = '';
+                let currentTime = new Date(workStart);
+                
+                while (currentTime <= workEnd) {
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = currentTime.toTimeString().substring(0, 5);
+                    timelineHeader.appendChild(timeSlot);
+                    
+                    currentTime.setMinutes(currentTime.getMinutes() + timeInterval);
+                }
+            }
+            
+            // Render employees function
+            function renderEmployees() {
+                const container = document.getElementById('employeesContainer');
+                container.innerHTML = '';
+                
+                if (employees.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">Нет данных о сотрудниках</div>';
+                    return;
+                }
+                
+                employees.forEach(employee => {
+                    const row = document.createElement('div');
+                    row.className = 'employee-row';
+                    
+                    const info = document.createElement('div');
+                    info.className = 'employee-info';
+                    info.dataset.id = employee.id;
+                    info.innerHTML = `
+                        <div class="employee-name">${employee.name}</div>
+                        <div class="employee-position">${employee.position}</div>
+                        <div class="employee-controls">
+                            <button class="edit-btn" onclick="openEditModal(${employee.id})">Редактировать</button>
+                            <button class="show-breaks-btn" onclick="showBreaks(${employee.id})">Перерывы</button>
+                        </div>
+                    `;
+                    
+                    const timeCells = document.createElement('div');
+                    timeCells.className = 'time-cells';
+                    
+                    // Create time cells for the entire work day
+                    let currentTime = new Date(workStart);
+                    
+                    while (currentTime <= workEnd) {
+                        const cell = document.createElement('div');
+                        cell.className = 'time-cell';
+                        
+                        // Check if this time cell is within any break
+                        const isBreak = employee.breaks.some(breakItem => {
+                            const cellEndTime = new Date(currentTime);
+                            cellEndTime.setMinutes(cellEndTime.getMinutes() + timeInterval);
+                            
+                            return currentTime >= breakItem.start && 
+                                   cellEndTime <= breakItem.end;
+                        });
+                        
+                        if (isBreak) {
+                            cell.classList.add('break');
+                        } else {
+                            cell.classList.add('active');
+                        }
+                        
+                        timeCells.appendChild(cell);
+                        
+                        currentTime.setMinutes(currentTime.getMinutes() + timeInterval);
+                    }
+                    
+                    row.appendChild(info);
+                    row.appendChild(timeCells);
+                    container.appendChild(row);
+                });
+                
+                // Select first employee by default
+                if (employees.length > 0 && !selectedEmployeeId) {
+                    selectedEmployeeId = employees[0].id;
+                }
+            }
+            
+            // Render PDF view function
+            function renderPdfView() {
+                const pdfTimelineHeader = document.getElementById('pdfTimelineHeader');
+                const pdfEmployeesContainer = document.getElementById('pdfEmployeesContainer');
+                
+                pdfTimelineHeader.innerHTML = '';
+                pdfEmployeesContainer.innerHTML = '';
+                
+                if (employees.length === 0) {
+                    pdfEmployeesContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">Нет данных о сотрудниках</div>';
+                    return;
+                }
+                
+                // Create timeline headers for PDF view
+                let currentTime = new Date(workStart);
+                while (currentTime <= workEnd) {
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'pdf-time-slot';
+                    timeSlot.textContent = currentTime.toTimeString().substring(0, 5);
+                    pdfTimelineHeader.appendChild(timeSlot);
+                    
+                    currentTime.setMinutes(currentTime.getMinutes() + timeInterval);
+                }
+                
+                // Create employee rows for PDF view
+                employees.forEach(employee => {
+                    const row = document.createElement('div');
+                    row.className = 'pdf-employee-row';
+                    
+                    const info = document.createElement('div');
+                    info.className = 'pdf-employee-info';
+                    info.innerHTML = `
+                        <div style="font-weight: bold;">${employee.name}</div>
+                        <div>${employee.position}</div>
+                    `;
+                    
+                    const timeCells = document.createElement('div');
+                    timeCells.className = 'pdf-time-cells';
+                    
+                    // Create time cells for the entire work day
+                    currentTime = new Date(workStart);
+                    
+                    while (currentTime <= workEnd) {
+                        const cell = document.createElement('div');
+                        cell.className = 'pdf-time-cell';
+                        
+                        // Check if this time cell is within any break
+                        const isBreak = employee.breaks.some(breakItem => {
+                            const cellEndTime = new Date(currentTime);
+                            cellEndTime.setMinutes(cellEndTime.getMinutes() + timeInterval);
+                            
+                            return currentTime >= breakItem.start && 
+                                   cellEndTime <= breakItem.end;
+                        });
+                        
+                        if (isBreak) {
+                            cell.classList.add('break');
+                        } else {
+                            cell.classList.add('active');
+                        }
+                        
+                        timeCells.appendChild(cell);
+                        
+                        currentTime.setMinutes(currentTime.getMinutes() + timeInterval);
+                    }
+                    
+                    row.appendChild(info);
+                    row.appendChild(timeCells);
+                    pdfEmployeesContainer.appendChild(row);
+                });
+            }
+            
+            // Share to social media function
+            function shareTo(platform) {
+                let message = `График перерывов сотрудников на ${new Date().toLocaleDateString('ru-RU')}\n\n`;
+                
+                employees.forEach(employee => {
+                    message += `👤 ${employee.name} (${employee.position}): `;
+                    if (employee.breaks.length > 0) {
+                        employee.breaks.forEach((br, index) => {
+                            const startTime = br.start.toTimeString().substring(0, 5);
+                            const endTime = br.end.toTimeString().substring(0, 5);
+                            message += `${startTime}-${endTime}${index < employee.breaks.length - 1 ? ', ' : ''}`;
+                        });
+                    } else {
+                        message += 'нет перерывов';
+                    }
+                    message += '\n';
+                });
+                
+                let url = '';
+                switch (platform) {
+                    case 'telegram':
+                        url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(message)}`;
+                        break;
+                    case 'whatsapp':
+                        url = `https://wa.me/?text=${encodeURIComponent(message + '\n' + window.location.href)}`;
+                        break;
+                }
+                
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            }
+            
+            // Export to PDF function
+            function exportToPDF() {
+                const { jsPDF } = window.jspdf;
+                
+                // Capture the timeline container
+                html2canvas(document.querySelector('.pdf-timeline-container')).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const doc = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'px',
+                        format: [canvas.width, canvas.height]
+                    });
+                    
+                    doc.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                    doc.save('график_перерывов.pdf');
+                });
+            }
+            
+            // Export to Image function
+            function exportToImage() {
+                // Capture the timeline container
+                html2canvas(document.querySelector('.pdf-timeline-container')).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'график_перерывов.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
+            
+            // Save to localStorage
+            function saveToLocalStorage() {
+                const data = {
+                    employees: employees,
+                    selectedEmployeeId: selectedEmployeeId
+                };
+                localStorage.setItem('employeeBreakData', JSON.stringify(data));
+            }
+            
+            // Load from localStorage
+            function loadFromLocalStorage() {
+                const data = JSON.parse(localStorage.getItem('employeeBreakData'));
+                if (data) {
+                    employees = data.employees.map(emp => ({
+                        ...emp,
+                        breaks: emp.breaks.map(br => ({
+                            ...br,
+                            start: new Date(br.start),
+                            end: new Date(br.end)
+                        }))
+                    }));
+                    selectedEmployeeId = data.selectedEmployeeId;
+                    renderEmployees();
+                }
+            }
+            
+            // Make functions available globally for onclick attributes
+            window.openEditModal = openEditModal;
+            window.closeEditModal = closeEditModal;
+            window.saveEmployeeEdit = saveEmployeeEdit;
+            window.showBreaks = showBreaks;
+            window.closeBreaksModal = closeBreaksModal;
+            window.editBreak = editBreak;
+            window.removeBreak = removeBreak;
+            window.showPreview = showPreview;
+            window.closePreviewModal = closePreviewModal;
+            window.shareTo = shareTo;
+            window.exportToPDF = exportToPDF;
+            window.exportToImage = exportToImage;
+        });
+    </script>
+</body>
+</html>
